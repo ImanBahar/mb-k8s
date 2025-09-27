@@ -1,0 +1,87 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: internal-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: internal-backend
+  template:
+    metadata:
+      labels:
+        app: internal-backend
+    spec:
+      containers:
+      - name: server-backend
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - all
+          privileged: false
+          readOnlyRootFilesystem: true
+        imagePullPolicy: Always
+        image: backend-image-ref
+        resources:
+          limits:
+            memory: "128Mi"
+            cpu: "500m"
+        tty: true
+        restartPolicy: Never
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: efs
+          mountPath: /shared
+        env:
+        - name: POSTGRES_USERNAME
+          valueFrom: 
+            secretKeyRef:
+              name: postgresql-secret
+              key: db_username
+        - name: POSTGRES_PASSWORD
+          valueFrom: 
+            secretKeyRef:
+              name: postgresql-secret
+              key: db_password
+        - name: POSTGRES_DB_URL
+          valueFrom: 
+            configMapKeyRef:
+              name: postgresql-configmap
+              key: db_url
+      volumes:
+      - name: efs
+        persistentVolumeClaim:
+          claimName: backend-service-efs
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: internal-backend
+spec:
+  selector:
+    app: internal-backend
+  ports:
+  - port: 80
+    targetPort: 80
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: internal-backend
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: internal-backend
+  minReplicas: 2
+  maxReplicas: 3
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 50

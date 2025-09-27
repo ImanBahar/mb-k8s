@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: tls-example
+type: kubernetes.io/tls
+data:
+  tls.crt: <base_64_encoded>
+  tls.key: <base_64_encoded>

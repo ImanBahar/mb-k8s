@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: database
+type: kubernetes.io/tls
+data:
+  db_username: <base_64_encoded>
+  db_password: <base_64_encoded>
